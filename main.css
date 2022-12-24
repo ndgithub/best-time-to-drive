@@ -1,0 +1,21 @@
+body {
+  padding: 4px;
+}
+
+#map {
+  height: 300px;
+  width: 300px;
+}
+.pac-input {
+  width: 500px;
+}
+
+#graph {
+  height: 400px;
+  min-width: 600px;
+  flex-grow: 1;
+}
+
+#display-box {
+  width: 100%;
+}
