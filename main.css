@@ -1,21 +1,33 @@
+html {
+  width: 100%;
+  background-color: #fcfcfc;
+}
 body {
-  padding: 4px;
+  background-color: #fcfcfc;
+}
+
+.container {
+  background-color: #fcfcfc;
+  width: 100%;
 }
 
 #map {
-  height: 300px;
-  width: 300px;
+  height: 400px;
+  width: 100%px;
 }
 .pac-input {
-  width: 500px;
+  width: 100%;
 }
 
 #graph {
   height: 400px;
-  min-width: 600px;
-  flex-grow: 1;
+  width: 100%;
+  overflow: visible;
+  border: 1px solid #f0f0f0;
 }
-
-#display-box {
+#get-times {
+  width: 100%;
+}
+#date-picker {
   width: 100%;
 }

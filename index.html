@@ -11,26 +11,43 @@
   </head>
 
   <body>
-    <input type="date" id="date-picker" />
+    <div class="container">
+      <div class="row mt-3">
+        <div class="col-md-4 mb-2">
+          <input
+            class="pac-input"
+            type="text"
+            id="pac-input"
+            value="836 expedition way round rock tx"
+          />
+        </div>
 
-    <p>Origin</p>
-    <input
-      class="pac-input"
-      type="text"
-      id="pac-input"
-      value="836 expedition way round rock tx"
-    />
-    <p>Destination</p>
-    <input
-      class="pac-input"
-      type="text"
-      id="pac-input-2"
-      value="Austin International Airport, TX"
-    />
-    <button id="get-times">Get Times</button>
-    <div id="display-box">
-      <div id="map"></div>
-      <div id="graph"></div>
+        <div class="col-md-4 mb-2">
+          <input
+            class="pac-input"
+            type="text"
+            id="pac-input-2"
+            value="Austin International Airport, TX"
+          />
+        </div>
+        <div class="col-md-2 mb-2">
+          <input type="date" id="date-picker" />
+        </div>
+        <div class="col-md-2 mb-2">
+          <button id="get-times">Get Times</button>
+        </div>
+      </div>
+      <div class="row mt-3">
+        <div class="col">
+          <div id="map"></div>
+        </div>
+      </div>
+
+      <div class="row mt-3">
+        <div class="column">
+          <div id="graph"></div>
+        </div>
+      </div>
     </div>
 
     <script

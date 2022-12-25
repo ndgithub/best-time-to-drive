@@ -2,13 +2,11 @@ function initMap() {
   let place1;
   let place2;
   let timeSpan = 86400000; // milliseconds in a day
-  let timeInterval = 3600000 * 10; // milliseconds in one hour
+  let timeInterval = 3600000 * 12; // milliseconds in one hour
   let timesArray = [];
-  let currentTime;
   let startTime = Date.now();
-  let endTime;
   let numIntervals = 0;
-  let requestDelay = 500;
+  let requestDelay = 2000;
 
   map = new google.maps.Map(document.getElementById('map'), {
     disableDefaultUI: true,
@@ -17,6 +15,7 @@ function initMap() {
       lng: -97.743061,
     },
     zoom: 8,
+    mapId: '43338ce9ef1e18f0',
   });
 
   const input1 = document.getElementById('pac-input');
@@ -30,7 +29,7 @@ function initMap() {
   var directionsService = new google.maps.DirectionsService();
   var directionsRenderer = new google.maps.DirectionsRenderer();
   directionsRenderer.setMap(map);
-
+  graphIt();
   autocomplete1.addListener('place_changed', () => {
     place1 = autocomplete1.getPlace();
     if (!place1.geometry || !place1.geometry.location) {
@@ -79,6 +78,7 @@ function initMap() {
       .catch((e) => window.alert('Directions request failed due to ' + status));
   }
   function getTimes(startTime, timeInterval) {
+    calculateAndDisplayRoute(directionsService, directionsRenderer);
     let datePicker = document.getElementById('date-picker');
     let dateSelectedMs = datePicker.valueAsNumber; //ms date at midnight GMT ****GOT IT***
     console.log(dateSelectedMs);
@@ -145,18 +145,27 @@ function initMap() {
     var myChart = echarts.init(document.getElementById('graph'));
     var option = {
       tooltip: {
-        valueFormatter: (value) => {
-          getFormattedTime(value);
+        valueFormatter: function (value) {
+          let hours = Math.floor(value / 3600) + 'h ';
+          return hours + Math.floor(value / 60) + 'm';
+        },
+        formatter: function (params) {
+          let hours = Math.floor(params.value / 3600) + 'h ';
+          return hours + Math.floor(params.value / 60) + 'm';
         },
       },
-
-      title: {
-        text: 'Drive Times',
+      legend: {
+        show: false,
       },
       grid: {
         containLabel: true,
       },
       xAxis: {
+        axisTick: {
+          alignWithLabel: true,
+        },
+        name: 'Departure Time',
+        nameLocation: 'center',
         scale: false,
         data: timesArray.map((el) => el[0]),
         axisLabel: {
@@ -177,9 +186,11 @@ function initMap() {
           },
         },
       },
+
       series: [
         {
-          name: 'sales',
+          color: '#EA4335',
+          showInTooltip: false,
           type: 'bar',
           smooth: true,
           data: timesArray.map((el) => el[1]),
@@ -207,6 +218,8 @@ function initMap() {
     return hrs + ':' + min + amPm;
   }
 }
+
+function minutestoTime(mins) {}
 
 // - Set map and all llistenrs including gettimes
 // - Get times
