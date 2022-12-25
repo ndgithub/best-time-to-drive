@@ -2,11 +2,11 @@ function initMap() {
   let place1;
   let place2;
   let timeSpan = 86400000; // milliseconds in a day
-  let timeInterval = 3600000 * 12; // milliseconds in one hour
+  let timeInterval = 3600000; // milliseconds in one hour
   let timesArray = [];
   let startTime = Date.now();
   let numIntervals = 0;
-  let requestDelay = 2000;
+  let requestDelay = 1000;
 
   map = new google.maps.Map(document.getElementById('map'), {
     disableDefaultUI: true,
@@ -125,6 +125,9 @@ function initMap() {
         timesArray.push([time, value]);
         console.log(typeof time);
         if ((numIntervals + 1) * timeInterval < timeSpan) {
+          timesArray.sort();
+          console.log(timesArray);
+          graphIt();
           setTimeout(() => {
             numIntervals++;
             getDirections(Number(time) + timeInterval);
