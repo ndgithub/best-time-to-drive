@@ -6,7 +6,8 @@ function initMap() {
   let timesArray = [];
   let startTime = Date.now();
   let numIntervals = 0;
-  let requestDelay = 1000;
+  let requestDelay = 600;
+  var myChart = echarts.init(document.getElementById('graph'));
 
   map = new google.maps.Map(document.getElementById('map'), {
     disableDefaultUI: true,
@@ -110,7 +111,7 @@ function initMap() {
         drivingOptions: {
           departureTime: time,
         },
-        avoidTolls: true,
+        //avoidTolls: true,
       })
       .then((response) => {
         let leg = response.routes[0].legs[0];
@@ -122,12 +123,15 @@ function initMap() {
         if (leg.duration_in_traffic) {
           value = leg.duration_in_traffic.value;
         }
-        timesArray.push([time, value]);
+        timesArray.push([time, value, response]);
         console.log(typeof time);
         if ((numIntervals + 1) * timeInterval < timeSpan) {
           timesArray.sort();
           console.log(timesArray);
           graphIt();
+          showStats();
+          directionsRenderer.setDirections(response);
+
           setTimeout(() => {
             numIntervals++;
             getDirections(Number(time) + timeInterval);
@@ -145,7 +149,7 @@ function initMap() {
   }
 
   function graphIt() {
-    var myChart = echarts.init(document.getElementById('graph'));
+    //var myChart = echarts.init(document.getElementById('graph'));
     var option = {
       tooltip: {
         valueFormatter: function (value) {
@@ -153,6 +157,7 @@ function initMap() {
           return hours + Math.floor(value / 60) + 'm';
         },
         formatter: function (params) {
+          directionsRenderer.setDirections(timesArray[params.dataIndex][2]);
           let hours = Math.floor(params.value / 3600) + 'h ';
           return hours + Math.floor(params.value / 60) + 'm';
         },
@@ -203,6 +208,10 @@ function initMap() {
 
     // Display the chart using the configuration items and data just specified.
     myChart.setOption(option);
+  }
+
+  function showStats() {
+    console.log(timesArray);
   }
 
   function getFormattedTime(timeMs) {
