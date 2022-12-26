@@ -2,23 +2,22 @@ function initMap() {
   let place1;
   let place2;
   let timeSpan = 86400000; // milliseconds in a day
-  let timeInterval = 3600000 * 8; // milliseconds in one hour
+  let timeInterval = 3600000; // milliseconds in one hour
   let timesArray = [];
   let startTime = Date.now();
   let numIntervals = 0;
   let requestDelay = 600;
   var myChart = echarts.init(document.getElementById('graph'));
 
-  map = new google.maps.Map(document.getElementById('map'), {
+  let map = new google.maps.Map(document.getElementById('map'), {
     disableDefaultUI: true,
     zoomControl: false,
     disableZoom: true,
-    tilt: 80,
     center: {
       lat: 30.267153,
       lng: -97.743061,
     },
-    zoom: 8,
+    zoom: 5,
     mapId: 'ad3981ee0e8f42a6',
   });
 
@@ -33,6 +32,7 @@ function initMap() {
   var directionsService = new google.maps.DirectionsService();
   var directionsRenderer = new google.maps.DirectionsRenderer();
   directionsRenderer.setMap(map);
+
   autocomplete1.addListener('place_changed', () => {
     place1 = autocomplete1.getPlace();
     if (!place1.geometry || !place1.geometry.location) {
@@ -189,9 +189,14 @@ function initMap() {
           return Math.floor(value.min * 0.85);
         },
         axisLabel: {
+          show: true,
+          name: 'minutes',
+
           formatter: function (value) {
-            let hours = Math.floor(value / 3600);
-            return hours + 'h ' + (value % 60) + 'm';
+            console.log(value);
+            console.log(Math.floor(value / 60));
+            console.log(value % 60);
+            return Math.floor(value / 60) + ' mins';
           },
         },
       },
