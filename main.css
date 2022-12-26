@@ -1,12 +1,9 @@
-.container {
-  width: 100%;
-}
-.bg-light {
-  background-color: #cccccc;
+body {
+  background-color: #fffef5 !important;
 }
 #map {
   height: 82%;
-  width: 100%px;
+  width: 100%;
 }
 .pac-input {
   width: 100%;

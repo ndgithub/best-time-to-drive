@@ -2,7 +2,7 @@ function initMap() {
   let place1;
   let place2;
   let timeSpan = 86400000; // milliseconds in a day
-  let timeInterval = 3600000; // milliseconds in one hour
+  let timeInterval = 3600000 * 8; // milliseconds in one hour
   let timesArray = [];
   let startTime = Date.now();
   let numIntervals = 0;
@@ -13,12 +13,13 @@ function initMap() {
     disableDefaultUI: true,
     zoomControl: false,
     disableZoom: true,
+    tilt: 80,
     center: {
       lat: 30.267153,
       lng: -97.743061,
     },
     zoom: 8,
-    //mapId: '43338ce9ef1e18f0',
+    mapId: 'ad3981ee0e8f42a6',
   });
 
   const input1 = document.getElementById('pac-input');
@@ -32,7 +33,6 @@ function initMap() {
   var directionsService = new google.maps.DirectionsService();
   var directionsRenderer = new google.maps.DirectionsRenderer();
   directionsRenderer.setMap(map);
-  graphIt();
   autocomplete1.addListener('place_changed', () => {
     place1 = autocomplete1.getPlace();
     if (!place1.geometry || !place1.geometry.location) {
@@ -131,7 +131,6 @@ function initMap() {
         if ((numIntervals + 1) * timeInterval < timeSpan) {
           timesArray.sort();
           console.log(timesArray);
-          graphIt();
           showStats();
           directionsRenderer.setDirections(response);
 
@@ -175,7 +174,6 @@ function initMap() {
         axisTick: {
           alignWithLabel: true,
         },
-        name: 'Departure Time',
         nameLocation: 'center',
         scale: false,
         data: timesArray.map((el) => el[0]),
@@ -188,12 +186,12 @@ function initMap() {
       },
       yAxis: {
         min: function (value) {
-          return value.min * 0.85;
+          return Math.floor(value.min * 0.85);
         },
         axisLabel: {
           formatter: function (value) {
-            let hours = Math.floor(value / 3600) + 'h ';
-            return hours + Math.floor(value / 60) + 'm';
+            let hours = Math.floor(value / 3600);
+            return hours + 'h ' + (value % 60) + 'm';
           },
         },
       },
@@ -219,8 +217,7 @@ function initMap() {
 
   function getFormattedTime(timeMs) {
     let theDate = new Date(timeMs);
-    console.log(theDate);
-    console.log(theDate.getHours());
+
     let hrs =
       theDate.getHours() - 12 > 0
         ? theDate.getHours() - 12
@@ -229,7 +226,14 @@ function initMap() {
       theDate.getMinutes() - 10 < 0
         ? '0' + theDate.getMinutes()
         : theDate.getMinutes();
-    let amPm = theDate.getHours() - 12 > 0 ? 'pm' : 'am';
+    let amPm = theDate.getHours() - 12 >= 0 ? 'pm' : 'am';
+
+    if (hrs + min === '000') {
+      return 'Midnite';
+    }
+    if (hrs + min === '1200') {
+      return 'Noon';
+    }
     return hrs + ':' + min + amPm;
   }
 }
