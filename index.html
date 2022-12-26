@@ -12,27 +12,38 @@
 
   <body class="bg-light">
     <div class="container">
-      <div class="row mt-3 border-red p-3">
-        <div class="col-md-4 mb-2">
+      <div class="input-groupd row mt-3 border-red p-3">
+        <div class="col-md-3 mb-2">
           <input
             class="pac-input form-control"
             type="text"
             id="pac-input"
-            value="836 expedition way round rock tx"
+            placeholder="Starting address"
           />
         </div>
 
-        <div class="col-md-4 mb-2">
+        <div class="col-md-3 mb-2">
           <input
             class="pac-input form-control"
             type="text"
             id="pac-input-2"
-            value="Austin International Airport, TX"
+            placeholder="Ending Address"
           />
         </div>
         <div class="col-md-2 mb-2">
           <input type="date" id="date-picker" class="form-control" />
         </div>
+        <div class="col-md-2 mb-2" id="checkbox-container">
+          <div id="checks">
+            <input
+              type="checkbox"
+              id="avoid-tolls"
+              aria-label="Checkbox for following text input"
+            />
+            <div>Avoid Tolls</div>
+          </div>
+        </div>
+
         <div class="col-md-2 mb-2">
           <button id="get-times" class="form-control bg-primary text-white">
             Get Times

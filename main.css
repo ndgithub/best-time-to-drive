@@ -24,7 +24,16 @@
 }
 .border-red {
   /* border: 4px solid #ff0000; */
-  background-color: #5898f8;
+  background-color: #83b0f4;
   padding: 0x;
   border-radius: 8px;
+}
+#avoid-tolls {
+}
+#checkbox-container {
+  height: 100%;
+}
+#checks {
+  display: flex;
+  flex-direction: row;
 }

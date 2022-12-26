@@ -11,12 +11,14 @@ function initMap() {
 
   map = new google.maps.Map(document.getElementById('map'), {
     disableDefaultUI: true,
+    zoomControl: false,
+    disableZoom: true,
     center: {
       lat: 30.267153,
       lng: -97.743061,
     },
     zoom: 8,
-    mapId: '43338ce9ef1e18f0',
+    //mapId: '43338ce9ef1e18f0',
   });
 
   const input1 = document.getElementById('pac-input');
@@ -65,6 +67,7 @@ function initMap() {
   function calculateAndDisplayRoute(directionsService, directionsRenderer) {
     directionsService
       .route({
+        // so route is a fundtion defined somewhere tht returns a promise.
         origin: {
           query: document.getElementById('pac-input').value,
         },
@@ -111,7 +114,7 @@ function initMap() {
         drivingOptions: {
           departureTime: time,
         },
-        //avoidTolls: true,
+        //avoidTolls: document.getElementById('avoid-tolls').value,
       })
       .then((response) => {
         let leg = response.routes[0].legs[0];
