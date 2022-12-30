@@ -1,20 +1,65 @@
 body {
-  background-color: #fffef5 !important;
+  height: 100vh;
+  width: 100vw;
+  background-color: #eeeeee !important;
 }
+
+#content {
+  background-color: #fffefaff;
+  width: 80%;
+  max-width: 980px;
+  height: 100%;
+  margin: auto;
+  /* border: 5px solid black; */
+  box-shadow: 2px 3px 3px 2px#cccccc;
+  padding: 18px;
+}
+
 #map {
-  height: 82%;
+  height: 100%;
   width: 100%;
 }
 .pac-input {
   width: 100%;
 }
+#control-row {
+}
+
+#map-row {
+  width: 100%;
+  background-color: green;
+  height: 38%;
+}
+
+#graph-row {
+  width: 100%;
+  background-color: #fffefaff;
+}
+
+/* #mappy {
+  width: 980px;
+  height: 400px;
+  background: radial-gradient(
+    circle at center,
+    #fffefa00 0%,
+    #fffefa00 25%,
+    #fffefaaa 30%
+  );
+  background: radial-gradient(#fffefa00, #fffefaff);
+  position: absolute;
+  z-index: 1000000;
+} */
 
 #graph {
+  height: 100%;
   height: 400px;
-  width: 100%;
+}
+
+.width-25p {
+  width: 25%;
 }
 #get-times {
-  width: 100%;
+  width: 25%;
 }
 #date-picker {
   width: 100%;
@@ -25,12 +70,22 @@ body {
   padding: 0x;
   border-radius: 8px;
 }
-#avoid-tolls {
+
+.col {
+  width: 100%;
 }
-#checkbox-container {
-  height: 100%;
+.form-control {
+  margin: 8px 0px 8px 0px;
 }
-#checks {
+
+.checkbox-container {
   display: flex;
   flex-direction: row;
+  background-color: red;
+  padding: 7px;
+  margin-bottom: 8px;
+}
+
+#avoid-tolls {
+  padding-left: 28px;
 }

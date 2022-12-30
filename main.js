@@ -6,8 +6,10 @@ function initMap() {
   let timesArray = [];
   let startTime = Date.now();
   let numIntervals = 0;
-  let requestDelay = 600;
-  var myChart = echarts.init(document.getElementById('graph'));
+  let requestDelay = 500;
+  let myChart = echarts.init(document.getElementById('graph'));
+  let isRetrieving = false;
+  let isDate = false;
 
   let map = new google.maps.Map(document.getElementById('map'), {
     disableDefaultUI: true,
@@ -17,21 +19,21 @@ function initMap() {
       lat: 30.267153,
       lng: -97.743061,
     },
-    zoom: 5,
+    zoom: 12,
     mapId: 'ad3981ee0e8f42a6',
   });
 
   const input1 = document.getElementById('pac-input');
-  const options1 = {};
-  const autocomplete1 = new google.maps.places.Autocomplete(input1, options1);
+  const autocomplete1 = new google.maps.places.Autocomplete(input1);
 
   const input2 = document.getElementById('pac-input-2');
-  const options2 = {};
-  const autocomplete2 = new google.maps.places.Autocomplete(input2, options2);
+  const autocomplete2 = new google.maps.places.Autocomplete(input2);
 
   var directionsService = new google.maps.DirectionsService();
   var directionsRenderer = new google.maps.DirectionsRenderer();
   directionsRenderer.setMap(map);
+
+  calculateAndDisplayRoute(directionsService, directionsRenderer);
 
   autocomplete1.addListener('place_changed', () => {
     place1 = autocomplete1.getPlace();
@@ -43,7 +45,6 @@ function initMap() {
     }
 
     map.setCenter(place1.geometry.location);
-    map.setZoom(17);
   });
 
   autocomplete2.addListener('place_changed', () => {
@@ -56,13 +57,26 @@ function initMap() {
     }
 
     calculateAndDisplayRoute(directionsService, directionsRenderer);
-    // map.setCenter(place2.geometry.location);
-    // map.setZoom(17);
   });
 
   document
     .getElementById('get-times')
     .addEventListener('click', () => getTimes(startTime, timeInterval));
+
+  function getTimes(startTime, timeInterval) {
+    calculateAndDisplayRoute(directionsService, directionsRenderer);
+    let datePicker = document.getElementById('date-picker');
+    let dateSelectedMs = datePicker.valueAsNumber; //ms date at midnight GMT ****GOT IT***
+
+    const date = new Date();
+    const offset = date.getTimezoneOffset();
+    console.log('offset: ' + offset);
+    dateSelectedOffsetMs = dateSelectedMs + offset * 60 * 1000; //Midnight on the day picked using systme time zone.
+
+    timesArray = [];
+    numIntervals = 0;
+    getDirections(dateSelectedOffsetMs + numIntervals * timeInterval);
+  }
 
   function calculateAndDisplayRoute(directionsService, directionsRenderer) {
     directionsService
@@ -80,21 +94,6 @@ function initMap() {
         directionsRenderer.setDirections(response);
       })
       .catch((e) => window.alert('Directions request failed due to ' + status));
-  }
-  function getTimes(startTime, timeInterval) {
-    calculateAndDisplayRoute(directionsService, directionsRenderer);
-    let datePicker = document.getElementById('date-picker');
-    let dateSelectedMs = datePicker.valueAsNumber; //ms date at midnight GMT ****GOT IT***
-    console.log(dateSelectedMs);
-    const date = new Date();
-    const offset = date.getTimezoneOffset();
-    console.log('offset: ' + offset);
-    dateSelectedOffsetMs = dateSelectedMs + offset * 60 * 1000; //Midnight on the day picked using systme time zone.
-    console.log(dateSelectedOffsetMs);
-
-    timesArray = [];
-    numIntervals = 0;
-    getDirections(dateSelectedOffsetMs + numIntervals * timeInterval);
   }
 
   function getDirections(time) {
@@ -127,7 +126,7 @@ function initMap() {
           value = leg.duration_in_traffic.value;
         }
         timesArray.push([time, value, response]);
-        console.log(typeof time);
+        graphIt();
         if ((numIntervals + 1) * timeInterval < timeSpan) {
           timesArray.sort();
           console.log(timesArray);
@@ -151,7 +150,6 @@ function initMap() {
   }
 
   function graphIt() {
-    //var myChart = echarts.init(document.getElementById('graph'));
     var option = {
       tooltip: {
         valueFormatter: function (value) {
@@ -170,6 +168,7 @@ function initMap() {
       grid: {
         containLabel: true,
       },
+      backgroundColor: 'rgb(255, 254, 250)',
       xAxis: {
         axisTick: {
           alignWithLabel: true,
@@ -203,7 +202,8 @@ function initMap() {
 
       series: [
         {
-          color: '#EA4335',
+          // color: '#EA4335',
+          color: '#3B94F4',
           showInTooltip: false,
           type: 'bar',
           smooth: true,
