@@ -24,9 +24,18 @@ function initMap() {
 
   const directionsService  = new google.maps.DirectionsService();
   const directionsRenderer = new google.maps.DirectionsRenderer({
-    polylineOptions: { strokeColor: '#2563EB', strokeWeight: 4 },
+    polylineOptions:  { strokeColor: '#2563EB', strokeWeight: 4 },
+    preserveViewport: true,
   });
   directionsRenderer.setMap(map);
+
+  // Force the map to repaint after the fixed-position container settles
+  setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
+
+  // Fit the route into the right-hand portion of the screen (sidebar offset)
+  function fitRoute(bounds) {
+    map.fitBounds(bounds, { left: 500, top: 60, right: 60, bottom: 60 });
+  }
 
   // ── Autocomplete ───────────────────────────────────────
   const input1 = document.getElementById('pac-input');
@@ -53,7 +62,10 @@ function initMap() {
       origin:      { query: input1.value },
       destination: { query: input2.value },
       travelMode:  google.maps.TravelMode.DRIVING,
-    }).then(res => directionsRenderer.setDirections(res)).catch(() => {});
+    }).then(res => {
+      directionsRenderer.setDirections(res);
+      fitRoute(res.routes[0].bounds);
+    }).catch(() => {});
   }
 
   // ── Error display ──────────────────────────────────────
