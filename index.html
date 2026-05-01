@@ -1,64 +1,169 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <link rel="stylesheet" href="main.css" />
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-  </head>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Best Time to Drive</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,400&family=Fira+Code:wght@400;500;600&family=Fira+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="main.css" />
+</head>
+<body>
+  <div id="app">
+    <header id="site-header">
+      <div class="header-inner">
+        <svg class="header-icon" width="30" height="30" viewBox="0 0 30 30" fill="none" aria-hidden="true">
+          <circle cx="15" cy="15" r="13" stroke="currentColor" stroke-width="1.4"/>
+          <path d="M15 5v3M15 22v3M5 15h3M22 15h3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <path d="M11 15l4-5 4 5-4 2-4-2z" fill="currentColor" opacity="0.7"/>
+          <circle cx="15" cy="15" r="2" fill="currentColor"/>
+        </svg>
+        <h1 class="site-title">Best Time to Drive</h1>
+      </div>
+    </header>
 
-  <body>
-    <div id="content">
-      <div class="rows" id="control-row">
-        <input
-          class="pac-input form-control"
-          type="text"
-          id="pac-input"
-          placeholder="Starting address"
-          value="11813 Runnymede Street, North Hollywood"
-        />
+    <main>
+      <section id="controls-section">
+        <div class="control-grid">
+          <div class="field-group">
+            <label class="field-label" for="pac-input">Origin</label>
+            <input
+              class="pac-input field-input"
+              type="text"
+              id="pac-input"
+              placeholder="Starting address"
+              value="11813 Runnymede Street, North Hollywood"
+              autocomplete="off"
+            />
+          </div>
 
-        <input
-          class="pac-input form-control"
-          type="text"
-          id="pac-input-2"
-          placeholder="Ending Address"
-          value="2934 Riverside Dr, Los Angeles, CA 90039"
-        />
+          <div class="field-group">
+            <label class="field-label" for="pac-input-2">Destination</label>
+            <input
+              class="pac-input field-input"
+              type="text"
+              id="pac-input-2"
+              placeholder="Ending address"
+              value="2934 Riverside Dr, Los Angeles, CA 90039"
+              autocomplete="off"
+            />
+          </div>
 
-        <input type="date" id="date-picker" class="width-25p form-control" />
-<div  class="form-check form-control" id="avoid-tolls">
-        <input class="form-check-input" type="checkbox" >
-  <label class="form-check-label" >
+          <div class="field-group field-group--date">
+            <label class="field-label" for="date-picker">Date</label>
+            <input type="date" id="date-picker" class="field-input" />
+          </div>
 
-    Avoid Tolls
-  </label></div>
+          <div class="field-group field-group--tolls">
+            <label class="toggle-label" for="avoid-tolls-check">
+              <input type="checkbox" id="avoid-tolls-check" />
+              <span class="toggle-track"><span class="toggle-thumb"></span></span>
+              <span class="toggle-text">Avoid Tolls</span>
+            </label>
+          </div>
 
-      
-          <button id="get-times" class="form-control bg-primary text-white">
-            Get Times
+          <button id="get-times" class="btn-primary" type="button">
+            <svg class="btn-icon" width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+              <path d="M7.5 1.5a6 6 0 100 12 6 6 0 000-12z" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M7.5 4.5v3l2 2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+            <span class="btn-label">Find Best Time</span>
+            <span class="btn-spinner" aria-hidden="true"></span>
           </button>
- 
-      </div>
-      <div class="rows" id="map-row">
-        <div id="map">
-          
-     
-        <div></div>
-      </div>
-      <div class="rows" id="graph-row">
-        <div id="graph"></div>
-      </div>
-    </div>
+        </div>
+      </section>
 
-    <script src="echarts.js"></script>
-    <script
-      src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"
-      integrity="sha384-kenU1KFdBIe4zVF0s0G1M5b4hcpxyD9F7jL+jjXkk+Q2h455rYXK/7HAuoJl+0I4"
-      crossorigin="anonymous"
-    ></script>
-    <script src="main.js"></script>
-    <script
-      async
-      src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBwDWeZXTKdg5VLLskzAuwl4_jQjmhhnj4&callback=initMap&libraries=places"
-    ></script>
-  </body>
+      <div id="error-banner" class="hidden" role="alert">
+        <svg width="15" height="15" viewBox="0 0 15 15" fill="none" aria-hidden="true">
+          <circle cx="7.5" cy="7.5" r="6.5" stroke="currentColor" stroke-width="1.3"/>
+          <path d="M7.5 4.5v3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+          <circle cx="7.5" cy="10.5" r="0.75" fill="currentColor"/>
+        </svg>
+        <span id="error-message"></span>
+      </div>
+
+      <div id="progress-section" class="hidden">
+        <div class="progress-header">
+          <span class="progress-label">Sampling <span id="progress-count">0</span>&thinsp;/&thinsp;24 departure times</span>
+          <span class="progress-pct" id="progress-pct">0%</span>
+        </div>
+        <div class="progress-track">
+          <div class="progress-bar" id="progress-bar" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <div id="stats-row" class="hidden">
+        <div class="stat-card stat-card--best">
+          <div class="stat-icon-wrap">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+              <path d="M8.5 1.5a7 7 0 100 14 7 7 0 000-14z" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M8.5 5v3.5l2.2 2.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-label">Best Departure</div>
+            <div class="stat-value" id="stat-best-time">—</div>
+            <div class="stat-sub" id="stat-best-dur">—</div>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--worst">
+          <div class="stat-icon-wrap">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+              <path d="M8.5 1.5a7 7 0 100 14 7 7 0 000-14z" stroke="currentColor" stroke-width="1.4"/>
+              <path d="M8.5 5v3.5l2.2 2.2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+              <path d="M5 12.5L12 5.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" opacity="0.5"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-label">Peak Traffic</div>
+            <div class="stat-value" id="stat-worst-time">—</div>
+            <div class="stat-sub" id="stat-worst-dur">—</div>
+          </div>
+        </div>
+
+        <div class="stat-card stat-card--savings">
+          <div class="stat-icon-wrap">
+            <svg width="17" height="17" viewBox="0 0 17 17" fill="none" aria-hidden="true">
+              <path d="M3 8.5h11M8.5 4l4.5 4.5-4.5 4.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div class="stat-body">
+            <div class="stat-label">Time Saved</div>
+            <div class="stat-value" id="stat-savings">—</div>
+            <div class="stat-sub">by leaving optimally</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="view-grid">
+        <div id="map-panel">
+          <div id="map"></div>
+        </div>
+        <div id="chart-panel">
+          <div class="chart-placeholder" id="chart-placeholder">
+            <div class="placeholder-inner">
+              <svg width="40" height="40" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+                <circle cx="20" cy="20" r="18" stroke="var(--border)" stroke-width="1.2" stroke-dasharray="4 3"/>
+                <path d="M10 28L20 12l10 16" stroke="var(--accent)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+                <circle cx="20" cy="22" r="2.5" fill="var(--accent)" opacity="0.35"/>
+              </svg>
+              <p>Select a date above,<br>then click Find Best Time</p>
+            </div>
+          </div>
+          <div id="graph"></div>
+          <p class="chart-hint hidden" id="chart-hint">Hover any bar to preview that route on the map</p>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="echarts.js"></script>
+  <script src="main.js"></script>
+  <script
+    async
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBwDWeZXTKdg5VLLskzAuwl4_jQjmhhnj4&callback=initMap&libraries=places"
+  ></script>
+</body>
 </html>
