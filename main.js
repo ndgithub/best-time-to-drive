@@ -1,249 +1,315 @@
 function initMap() {
-  let place1;
-  let place2;
-  let timeSpan = 86400000; // milliseconds in a day
-  let timeInterval = 3600000; // milliseconds in one hour
-  let timesArray = [];
-  let startTime = Date.now();
+  // ── State ──────────────────────────────────────────────
+  let timesArray   = [];
   let numIntervals = 0;
-  let requestDelay = 500;
-  let myChart = echarts.init(document.getElementById('graph'));
   let isRetrieving = false;
-  let isDate = false;
 
-  let map = new google.maps.Map(document.getElementById('map'), {
+  // ── Config ─────────────────────────────────────────────
+  const TOTAL_HOURS    = 24;
+  const TIME_INTERVAL  = 3600000;  // 1 hour in ms
+  const REQUEST_DELAY  = 500;      // ms between API calls
+
+  // ── ECharts ────────────────────────────────────────────
+  const myChart = echarts.init(document.getElementById('graph'));
+  window.addEventListener('resize', () => myChart.resize());
+
+  // ── Google Maps ────────────────────────────────────────
+  const map = new google.maps.Map(document.getElementById('map'), {
     disableDefaultUI: true,
     zoomControl: false,
-    disableZoom: true,
-    center: {
-      lat: 30.267153,
-      lng: -97.743061,
-    },
+    center: { lat: 34.05, lng: -118.35 },
     zoom: 12,
     mapId: 'ad3981ee0e8f42a6',
   });
 
-  const input1 = document.getElementById('pac-input');
-  const autocomplete1 = new google.maps.places.Autocomplete(input1);
-
-  const input2 = document.getElementById('pac-input-2');
-  const autocomplete2 = new google.maps.places.Autocomplete(input2);
-
-  var directionsService = new google.maps.DirectionsService();
-  var directionsRenderer = new google.maps.DirectionsRenderer();
+  const directionsService  = new google.maps.DirectionsService();
+  const directionsRenderer = new google.maps.DirectionsRenderer({
+    polylineOptions: { strokeColor: '#2563EB', strokeWeight: 4 },
+  });
   directionsRenderer.setMap(map);
 
-  calculateAndDisplayRoute(directionsService, directionsRenderer);
+  // ── Autocomplete ───────────────────────────────────────
+  const input1 = document.getElementById('pac-input');
+  const input2 = document.getElementById('pac-input-2');
+
+  const autocomplete1 = new google.maps.places.Autocomplete(input1);
+  const autocomplete2 = new google.maps.places.Autocomplete(input2);
 
   autocomplete1.addListener('place_changed', () => {
-    place1 = autocomplete1.getPlace();
-    if (!place1.geometry || !place1.geometry.location) {
-      // User entered the name of a Place that was not suggested and
-      // pressed the Enter key, or the Place Details request failed.
-      window.alert("No details available for input: '" + place.name + "'");
+    const place = autocomplete1.getPlace();
+    if (place?.geometry?.location) map.setCenter(place.geometry.location);
+    previewRoute();
+  });
+
+  autocomplete2.addListener('place_changed', () => previewRoute());
+
+  document.getElementById('get-times').addEventListener('click', startAnalysis);
+
+  previewRoute();
+
+  // ── Route preview (no traffic) ─────────────────────────
+  function previewRoute() {
+    directionsService.route({
+      origin:      { query: input1.value },
+      destination: { query: input2.value },
+      travelMode:  google.maps.TravelMode.DRIVING,
+    }).then(res => directionsRenderer.setDirections(res)).catch(() => {});
+  }
+
+  // ── Error display ──────────────────────────────────────
+  function showError(msg) {
+    const banner = document.getElementById('error-banner');
+    document.getElementById('error-message').textContent = msg;
+    banner.classList.remove('hidden');
+  }
+
+  function clearError() {
+    document.getElementById('error-banner').classList.add('hidden');
+  }
+
+  // ── Start full-day analysis ────────────────────────────
+  function startAnalysis() {
+    const datePicker = document.getElementById('date-picker');
+    if (!datePicker.valueAsNumber) {
+      datePicker.focus();
+      datePicker.style.borderColor = 'var(--danger)';
+      setTimeout(() => { datePicker.style.borderColor = ''; }, 2000);
+      showError('Please select a date before searching.');
       return;
     }
 
-    map.setCenter(place1.geometry.location);
-  });
-
-  autocomplete2.addListener('place_changed', () => {
-    place2 = autocomplete2.getPlace();
-    if (!place2.geometry || !place2.geometry.location) {
-      // User entered the name of a Place that was not suggested and
-      // pressed the Enter key, or the Place Details request failed.
-      window.alert("No details available for input: '" + place.name + "'");
+    // Reject past dates — the Directions API requires future departure times
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const offset   = new Date().getTimezoneOffset();
+    const midnight = datePicker.valueAsNumber + offset * 60 * 1000;
+    if (midnight < today.getTime()) {
+      datePicker.style.borderColor = 'var(--danger)';
+      setTimeout(() => { datePicker.style.borderColor = ''; }, 2000);
+      showError('Please pick today or a future date — traffic predictions aren\'t available for past dates.');
       return;
     }
 
-    calculateAndDisplayRoute(directionsService, directionsRenderer);
-  });
+    if (isRetrieving) return;
 
-  document
-    .getElementById('get-times')
-    .addEventListener('click', () => getTimes(startTime, timeInterval));
-
-  function getTimes(startTime, timeInterval) {
-    calculateAndDisplayRoute(directionsService, directionsRenderer);
-    let datePicker = document.getElementById('date-picker');
-    let dateSelectedMs = datePicker.valueAsNumber; //ms date at midnight GMT ****GOT IT***
-
-    const date = new Date();
-    const offset = date.getTimezoneOffset();
-    console.log('offset: ' + offset);
-    dateSelectedOffsetMs = dateSelectedMs + offset * 60 * 1000; //Midnight on the day picked using systme time zone.
-
-    timesArray = [];
+    isRetrieving = true;
+    timesArray   = [];
     numIntervals = 0;
-    getDirections(dateSelectedOffsetMs + numIntervals * timeInterval);
+
+    const btn = document.getElementById('get-times');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    clearError();
+    document.getElementById('progress-section').classList.remove('hidden');
+    document.getElementById('stats-row').classList.add('hidden');
+    document.getElementById('chart-placeholder').classList.add('hidden');
+    document.getElementById('chart-hint').classList.add('hidden');
+    updateProgress(0);
+
+    // Midnight on the selected date in local time
+    const offset   = new Date().getTimezoneOffset();
+    const midnight = datePicker.valueAsNumber + offset * 60 * 1000;
+
+    previewRoute();
+    fetchHour(midnight);
   }
 
-  function calculateAndDisplayRoute(directionsService, directionsRenderer) {
-    directionsService
-      .route({
-        // so route is a fundtion defined somewhere tht returns a promise.
-        origin: {
-          query: document.getElementById('pac-input').value,
-        },
-        destination: {
-          query: document.getElementById('pac-input-2').value,
-        },
-        travelMode: google.maps.TravelMode.DRIVING,
-      })
-      .then((response) => {
-        directionsRenderer.setDirections(response);
-      })
-      .catch((e) => window.alert('Directions request failed due to ' + status));
+  // ── Fetch one hour slot, recurse through the day ───────
+  function fetchHour(timeMs) {
+    const departureTime = new Date(timeMs);
+    const avoidTolls    = document.getElementById('avoid-tolls-check').checked;
+
+    directionsService.route({
+      origin:         { query: input1.value },
+      destination:    { query: input2.value },
+      travelMode:     google.maps.TravelMode.DRIVING,
+      drivingOptions: { departureTime },
+      avoidTolls,
+    }).then(response => {
+      const leg      = response.routes[0].legs[0];
+      const duration = (leg.duration_in_traffic ?? leg.duration).value;
+
+      timesArray.push([timeMs, duration, response]);
+      timesArray.sort((a, b) => a[0] - b[0]);
+
+      numIntervals++;
+      updateProgress(numIntervals);
+      drawChart();
+
+      if (numIntervals < TOTAL_HOURS) {
+        setTimeout(() => fetchHour(timeMs + TIME_INTERVAL), REQUEST_DELAY);
+      } else {
+        finish();
+      }
+    }).catch(err => {
+      console.error('Directions error:', err);
+      showError('Could not fetch directions. Check the addresses and try again.');
+      finish(true);
+    });
   }
 
-  function getDirections(time) {
-    console.log(time);
-    time = new Date(time); //correct date object (midnight at systime of the selected date)
-    console.log(time);
+  // ── Wrap up ────────────────────────────────────────────
+  function finish(hadError = false) {
+    isRetrieving = false;
+    const btn = document.getElementById('get-times');
+    btn.classList.remove('loading');
+    btn.disabled = false;
 
-    directionsService
-      .route({
-        origin: {
-          query: document.getElementById('pac-input').value,
-        },
-        destination: {
-          query: document.getElementById('pac-input-2').value,
-        },
-        travelMode: google.maps.TravelMode.DRIVING,
-        drivingOptions: {
-          departureTime: time,
-        },
-        //avoidTolls: document.getElementById('avoid-tolls').value,
-      })
-      .then((response) => {
-        let leg = response.routes[0].legs[0];
-        let value;
+    if (hadError) {
+      document.getElementById('progress-section').classList.add('hidden');
+      document.getElementById('chart-placeholder').classList.remove('hidden');
+      return;
+    }
 
-        if (!leg.duration_in_traffic) {
-          value = leg.duration.value;
-        }
-        if (leg.duration_in_traffic) {
-          value = leg.duration_in_traffic.value;
-        }
-        timesArray.push([time, value, response]);
-        graphIt();
-        if ((numIntervals + 1) * timeInterval < timeSpan) {
-          timesArray.sort();
-          console.log(timesArray);
-          showStats();
-          directionsRenderer.setDirections(response);
-
-          setTimeout(() => {
-            numIntervals++;
-            getDirections(Number(time) + timeInterval);
-          }, requestDelay);
-        } else {
-          timesArray.sort();
-          console.log(timesArray);
-          graphIt();
-        }
-      })
-      .catch((e) => {
-        console.log(e);
-        window.alert('Directions request failed due to ' + e);
-      });
+    if (timesArray.length > 0) {
+      drawChart();
+      renderStats();
+      document.getElementById('chart-hint').classList.remove('hidden');
+    }
   }
 
-  function graphIt() {
-    var option = {
+  // ── Progress bar ───────────────────────────────────────
+  function updateProgress(count) {
+    const pct = Math.round((count / TOTAL_HOURS) * 100);
+    document.getElementById('progress-count').textContent = count;
+    document.getElementById('progress-pct').textContent   = pct + '%';
+    document.getElementById('progress-bar').style.width   = pct + '%';
+  }
+
+  // ── Duration → "1h 23m" ────────────────────────────────
+  function fmtDuration(seconds) {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    if (h === 0) return m + 'm';
+    if (m === 0) return h + 'h';
+    return h + 'h ' + m + 'm';
+  }
+
+  // ── Timestamp → "6am", "12:30pm", "Midnight" ──────────
+  function fmtTime(timeMs) {
+    const d = new Date(Number(timeMs));
+    const h = d.getHours();
+    const m = d.getMinutes();
+    if (h === 0  && m === 0) return 'Midnight';
+    if (h === 12 && m === 0) return 'Noon';
+    const ampm     = h >= 12 ? 'pm' : 'am';
+    const displayH = h % 12 || 12;
+    const displayM = m === 0 ? '' : ':' + String(m).padStart(2, '0');
+    return displayH + displayM + ampm;
+  }
+
+  // ── Chart ──────────────────────────────────────────────
+  function drawChart() {
+    if (timesArray.length === 0) return;
+
+    const durations = timesArray.map(el => el[1]);
+    const minDur    = Math.min(...durations);
+
+    const barData = timesArray.map(el => {
+      const isBest = el[1] === minDur;
+      return {
+        value: el[1],
+        itemStyle: {
+          color: isBest
+            ? { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, global: false,
+                colorStops: [{ offset: 0, color: '#FCD34D' }, { offset: 1, color: '#D97706' }] }
+            : { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, global: false,
+                colorStops: [{ offset: 0, color: '#93C5FD' }, { offset: 1, color: '#1D4ED8' }] },
+          borderRadius: [4, 4, 0, 0],
+          shadowBlur:   isBest ? 10 : 0,
+          shadowColor:  isBest ? 'rgba(217,119,6,0.35)' : 'transparent',
+        },
+      };
+    });
+
+    myChart.setOption({
+      backgroundColor: '#FFFFFF',
+      animation:        true,
+      animationDuration: 450,
+      animationEasing:  'cubicOut',
+
       tooltip: {
-        valueFormatter: function (value) {
-          let hours = Math.floor(value / 3600) + 'h ';
-          return hours + Math.floor(value / 60) + 'm';
+        trigger: 'item',
+        backgroundColor: '#0D1B2A',
+        borderWidth: 0,
+        padding: [10, 14],
+        extraCssText: 'border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.28);',
+        textStyle: {
+          color: '#F8F7F2',
+          fontFamily: "'Fira Code', monospace",
+          fontSize: 12,
         },
-        formatter: function (params) {
+        formatter(params) {
           directionsRenderer.setDirections(timesArray[params.dataIndex][2]);
-          let hours = Math.floor(params.value / 3600) + 'h ';
-          return hours + Math.floor(params.value / 60) + 'm';
+          const timeLabel = fmtTime(timesArray[params.dataIndex][0]);
+          const dur       = fmtDuration(params.value);
+          const isBest    = params.value === minDur;
+          const badge     = isBest
+            ? '<span style="margin-left:7px;color:#FCD34D;font-size:10px;letter-spacing:0.05em">BEST</span>'
+            : '';
+          return `<div style="opacity:0.55;margin-bottom:4px;font-size:11px">${timeLabel}</div>`
+               + `<div style="font-size:14px;font-weight:600">${dur}${badge}</div>`;
         },
       },
-      legend: {
-        show: false,
-      },
-      grid: {
-        containLabel: true,
-      },
-      backgroundColor: 'rgb(255, 254, 250)',
+
+      grid: { left: 12, right: 14, top: 14, bottom: 0, containLabel: true },
+
       xAxis: {
-        axisTick: {
-          alignWithLabel: true,
-        },
-        nameLocation: 'center',
-        scale: false,
-        data: timesArray.map((el) => el[0]),
+        type: 'category',
+        data: timesArray.map(el => el[0]),
+        axisTick:  { show: false },
+        axisLine:  { lineStyle: { color: '#DDDAD0' } },
         axisLabel: {
-          formatter: function (date) {
-            console.log(date);
-            return getFormattedTime(date);
-          },
+          fontFamily: "'Fira Code', monospace",
+          fontSize:   12,
+          color:      '#4A5568',
+          formatter:  val => fmtTime(val),
+          interval:   3,
         },
       },
+
       yAxis: {
-        min: function (value) {
-          return Math.floor(value.min * 0.85);
-        },
+        type: 'value',
+        min:  val => Math.floor(val.min * 0.88),
+        splitLine: { lineStyle: { color: '#E8E6DE', type: 'dashed' } },
+        axisLine:  { show: false },
+        axisTick:  { show: false },
         axisLabel: {
-          show: true,
-          name: 'minutes',
-
-          formatter: function (value) {
-            console.log(value);
-            console.log(Math.floor(value / 60));
-            console.log(value % 60);
-            return Math.floor(value / 60) + ' mins';
-          },
+          fontFamily: "'Fira Code', monospace",
+          fontSize:   12,
+          color:      '#4A5568',
+          formatter:  val => fmtDuration(val),
         },
       },
 
-      series: [
-        {
-          // color: '#EA4335',
-          color: '#3B94F4',
-          showInTooltip: false,
-          type: 'bar',
-          smooth: true,
-          data: timesArray.map((el) => el[1]),
+      series: [{
+        type: 'bar',
+        data: barData,
+        barMaxWidth: 28,
+        emphasis: {
+          focus: 'self',
+          itemStyle: { shadowBlur: 12, shadowColor: 'rgba(37,99,235,0.3)' },
         },
-      ],
-    };
-
-    // Display the chart using the configuration items and data just specified.
-    myChart.setOption(option);
+      }],
+    }, false);
   }
 
-  function showStats() {
-    console.log(timesArray);
-  }
+  // ── Stats cards ────────────────────────────────────────
+  function renderStats() {
+    const durations = timesArray.map(el => el[1]);
+    const minDur    = Math.min(...durations);
+    const maxDur    = Math.max(...durations);
 
-  function getFormattedTime(timeMs) {
-    let theDate = new Date(timeMs);
+    const best  = timesArray.find(el => el[1] === minDur);
+    const worst = timesArray.find(el => el[1] === maxDur);
 
-    let hrs =
-      theDate.getHours() - 12 > 0
-        ? theDate.getHours() - 12
-        : theDate.getHours();
-    let min =
-      theDate.getMinutes() - 10 < 0
-        ? '0' + theDate.getMinutes()
-        : theDate.getMinutes();
-    let amPm = theDate.getHours() - 12 >= 0 ? 'pm' : 'am';
+    document.getElementById('stat-best-time').textContent  = fmtTime(best[0]);
+    document.getElementById('stat-best-dur').textContent   = fmtDuration(minDur);
+    document.getElementById('stat-worst-time').textContent = fmtTime(worst[0]);
+    document.getElementById('stat-worst-dur').textContent  = fmtDuration(maxDur);
+    document.getElementById('stat-savings').textContent    = fmtDuration(maxDur - minDur);
 
-    if (hrs + min === '000') {
-      return 'Midnite';
-    }
-    if (hrs + min === '1200') {
-      return 'Noon';
-    }
-    return hrs + ':' + min + amPm;
+    document.getElementById('stats-row').classList.remove('hidden');
   }
 }
-
-function minutestoTime(mins) {}
-
-// - Set map and all llistenrs including gettimes
-// - Get times
