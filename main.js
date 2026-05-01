@@ -107,10 +107,6 @@ function initMap() {
     document.getElementById('chart-hint').classList.add('hidden');
     updateProgress(0);
 
-    // Midnight on the selected date in local time
-    const offset   = new Date().getTimezoneOffset();
-    const midnight = datePicker.valueAsNumber + offset * 60 * 1000;
-
     previewRoute();
     fetchHour(midnight);
   }
