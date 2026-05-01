@@ -170,6 +170,8 @@ function initMap() {
       return;
     }
 
+    document.getElementById('progress-section').classList.add('hidden');
+
     if (timesArray.length > 0) {
       drawChart();
       renderStats();
