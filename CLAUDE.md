@@ -4,32 +4,48 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A static, no-build-step web app. Open `index.html` in a browser via a local HTTP server — no npm, no bundler, no framework.
+A static, no-build-step web app. Open `index.html` via a local HTTP server — no npm, no bundler, no framework.
 
 ```bash
-# Serve locally (any of these work)
-python3 -m http.server 8080
-npx serve .
-# or use VS Code Live Server (launch config targets localhost:8080)
+python3 -m http.server 8081
+# or: npx serve .
 ```
 
 ## Architecture
 
-Everything runs inside `initMap()` in `main.js`, which Google Maps calls as its async callback after loading. All state is local to that closure.
+Everything runs inside `initMap()` in `main.js`, which Google Maps calls as its async callback. All state is local to that closure.
 
 **Data flow:**
 1. User picks origin/destination (Google Places Autocomplete) and a date
-2. "Get Times" iterates through all 24 hours of that day, firing one `directionsService.route()` call per hour with a 500ms delay between requests (`requestDelay`)
-3. Each response pushes `[Date, durationSeconds, routeResponse]` into `timesArray`
-4. `graphIt()` redraws the ECharts bar chart after each response lands
-5. Hovering a bar in the chart calls `directionsRenderer.setDirections()` with that hour's stored response — updating the map in real time
+2. "Find Best Time" validates the date (must be today or future), then iterates through all 24 hours of that day, firing one `directionsService.route()` call per hour with a 500ms delay between requests
+3. Each response pushes `[timestampMs, durationSeconds, routeResponse]` into `timesArray`
+4. `drawChart()` redraws the ECharts bar chart after each response — the best (minimum) time bar renders in amber/gold, the rest in blue
+5. `renderStats()` populates the three stat cards (Best Departure, Peak Traffic, Time Saved) once all 24 slots are done
+6. Hovering a chart bar calls `directionsRenderer.setDirections()` with that hour's stored response, updating the map polyline in real time
 
-**Key globals in `initMap()` closure:**
-- `timesArray` — accumulates `[time, value, response]` tuples
-- `numIntervals` — tracks which hour slot is currently being fetched
-- `timeSpan` / `timeInterval` — 86400000ms / 3600000ms (1 day, 1-hour slots)
-- `myChart` — ECharts instance bound to `#graph`
-- `directionsRenderer` — single renderer reused for both preview and hover
+**Key state in `initMap()` closure:**
+- `timesArray` — sorted `[timestampMs, durationSeconds, routeResponse]` tuples
+- `numIntervals` — how many hour slots have been fetched
+- `isRetrieving` — guards against double-submission
+- `myChart` — ECharts instance on `#graph`
+- `directionsRenderer` — single renderer with `preserveViewport: true`; viewport only moves via `fitRoute()`
+
+**`fitRoute(bounds)`** — calls `map.fitBounds` with `left: 500` padding so the route centers in the visible right-hand portion of the screen (clear of the sidebar).
+
+## Layout
+
+Full-page Google Map as background (`position: fixed; inset: 0; z-index: 0`). A fixed left sidebar (`#sidebar`, 460px wide, scrollable) floats above it with frosted-glass cards (`backdrop-filter: blur(20px)`).
+
+```
+[Map — full page background]
+[#sidebar — fixed left panel]
+  header pill (title + ? info tooltip)
+  #controls-section (origin, destination, date, tolls toggle, button)
+  #error-banner (hidden unless validation/API error)
+  #progress-section (shown during fetch, hidden on completion)
+  #stats-row (Best Departure | Peak Traffic | Time Saved — shown after completion)
+  #chart-panel (ECharts bar chart + placeholder before first run)
+```
 
 ## Dependencies (all external/local, no package manager)
 
@@ -37,11 +53,24 @@ Everything runs inside `initMap()` in `main.js`, which Google Maps calls as its 
 |---|---|
 | Google Maps JS API + Places | CDN script tag with key in `index.html`; `initMap` is the callback |
 | ECharts | Local `echarts.js` (vendored) |
-| Bootstrap 4 CSS + Bootstrap 5 JS | CDN — mixed versions, intentional or not |
+| Fira Code + Fira Sans | Google Fonts CDN |
 
-## Known issues / unfinished work
+## Google Maps APIs used
 
-- "Avoid Tolls" checkbox is rendered but `avoidTolls` option is commented out in `getDirections()`
+- **Maps JavaScript API** — map display
+- **Directions API** (`DirectionsService` with `drivingOptions.departureTime` + `duration_in_traffic`) — traffic-aware routing; requires future departure times
+- **Places API** (`Autocomplete`) — address suggestions
+
+## Design system
+
+- `--font-body`: Fira Sans (UI text, title)
+- `--font-mono`: Fira Code (all labels, stat values, axis ticks)
+- `--accent` / `--accent-mid`: deep/mid blue for bars and interactive elements
+- `--gold` / `--gold-light`: amber for the best-time bar and best departure stat card
+- `--glass-bg` + `--glass-blur`: frosted glass token applied to all sidebar cards
+
+## Known issues / unfinished
+
+- "Avoid Tolls" checkbox is wired up but the Directions API only honours it on some routes
 - `scratch.js` is a dev scratch file, not loaded by `index.html`
-- `minutestoTime()` at the bottom of `main.js` is empty stub
-- Google Maps API key is hardcoded in `index.html` — treat it as potentially public
+- Google Maps API key is hardcoded in `index.html`
