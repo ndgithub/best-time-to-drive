@@ -13,6 +13,12 @@ function initMap() {
   const myChart = echarts.init(document.getElementById('graph'));
   window.addEventListener('resize', () => myChart.resize());
 
+  myChart.on('mouseover', params => {
+    if (params.componentType === 'series' && timesArray[params.dataIndex]) {
+      directionsRenderer.setDirections(timesArray[params.dataIndex][2]);
+    }
+  });
+
   // ── Google Maps ────────────────────────────────────────
   const map = new google.maps.Map(document.getElementById('map'), {
     disableDefaultUI: true,
@@ -24,18 +30,9 @@ function initMap() {
 
   const directionsService  = new google.maps.DirectionsService();
   const directionsRenderer = new google.maps.DirectionsRenderer({
-    polylineOptions:  { strokeColor: '#2563EB', strokeWeight: 4 },
-    preserveViewport: true,
+    polylineOptions: { strokeColor: '#2563EB', strokeWeight: 4 },
   });
   directionsRenderer.setMap(map);
-
-  // Force the map to repaint after the fixed-position container settles
-  setTimeout(() => google.maps.event.trigger(map, 'resize'), 100);
-
-  // Fit the route into the right-hand portion of the screen (sidebar offset)
-  function fitRoute(bounds) {
-    map.fitBounds(bounds, { left: 500, top: 60, right: 60, bottom: 60 });
-  }
 
   // ── Autocomplete ───────────────────────────────────────
   const input1 = document.getElementById('pac-input');
@@ -62,10 +59,7 @@ function initMap() {
       origin:      { query: input1.value },
       destination: { query: input2.value },
       travelMode:  google.maps.TravelMode.DRIVING,
-    }).then(res => {
-      directionsRenderer.setDirections(res);
-      fitRoute(res.routes[0].bounds);
-    }).catch(() => {});
+    }).then(res => directionsRenderer.setDirections(res)).catch(() => {});
   }
 
   // ── Error display ──────────────────────────────────────
@@ -113,8 +107,6 @@ function initMap() {
     btn.disabled = true;
 
     clearError();
-    document.getElementById('progress-section').classList.remove('hidden');
-    document.getElementById('stats-row').classList.add('hidden');
     document.getElementById('chart-placeholder').classList.add('hidden');
     document.getElementById('chart-hint').classList.add('hidden');
     updateProgress(0);
@@ -165,16 +157,12 @@ function initMap() {
     btn.disabled = false;
 
     if (hadError) {
-      document.getElementById('progress-section').classList.add('hidden');
       document.getElementById('chart-placeholder').classList.remove('hidden');
       return;
     }
 
-    document.getElementById('progress-section').classList.add('hidden');
-
     if (timesArray.length > 0) {
-      drawChart();
-      renderStats();
+      drawChart(true);
       document.getElementById('chart-hint').classList.remove('hidden');
     }
   }
@@ -182,9 +170,7 @@ function initMap() {
   // ── Progress bar ───────────────────────────────────────
   function updateProgress(count) {
     const pct = Math.round((count / TOTAL_HOURS) * 100);
-    document.getElementById('progress-count').textContent = count;
-    document.getElementById('progress-pct').textContent   = pct + '%';
-    document.getElementById('progress-bar').style.width   = pct + '%';
+    document.getElementById('progress-bar').style.width = pct + '%';
   }
 
   // ── Duration → "1h 23m" ────────────────────────────────
@@ -210,25 +196,38 @@ function initMap() {
   }
 
   // ── Chart ──────────────────────────────────────────────
-  function drawChart() {
+  function drawChart(isFinal = false) {
     if (timesArray.length === 0) return;
 
+    const isMobile = window.innerWidth <= 760;
     const durations = timesArray.map(el => el[1]);
     const minDur    = Math.min(...durations);
+    const maxDur    = Math.max(...durations);
+    const bestIdx   = isFinal ? timesArray.findIndex(el => el[1] === minDur) : -1;
+    const worstIdx  = isFinal ? timesArray.findIndex(el => el[1] === maxDur) : -1;
 
-    const barData = timesArray.map(el => {
-      const isBest = el[1] === minDur;
+    const barData = timesArray.map((el, i) => {
+      const isBest  = isFinal && el[1] === minDur;
+      const isWorst = isFinal && el[1] === maxDur && !isBest;
       return {
         value: el[1],
         itemStyle: {
           color: isBest
             ? { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, global: false,
-                colorStops: [{ offset: 0, color: '#FCD34D' }, { offset: 1, color: '#D97706' }] }
+                colorStops: [{ offset: 0, color: '#86EFAC' }, { offset: 1, color: '#16A34A' }] }
+            : isWorst
+            ? { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, global: false,
+                colorStops: [{ offset: 0, color: '#FCA5A5' }, { offset: 1, color: '#DC2626' }] }
             : { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, global: false,
                 colorStops: [{ offset: 0, color: '#93C5FD' }, { offset: 1, color: '#1D4ED8' }] },
           borderRadius: [4, 4, 0, 0],
-          shadowBlur:   isBest ? 10 : 0,
-          shadowColor:  isBest ? 'rgba(217,119,6,0.35)' : 'transparent',
+          shadowBlur:   (isBest || isWorst) ? 10 : 0,
+          shadowColor:  isBest ? 'rgba(22,163,74,0.35)' : isWorst ? 'rgba(220,38,38,0.35)' : 'transparent',
+        },
+        label: {
+          ...(isMobile && (isBest || isWorst) && { show: true }),
+          color:    isBest ? '#16A34A' : isWorst ? '#DC2626' : '#4A5568',
+          fontSize: (!isMobile && (isBest || isWorst)) ? 20 : 10,
         },
       };
     });
@@ -240,30 +239,32 @@ function initMap() {
       animationEasing:  'cubicOut',
 
       tooltip: {
-        trigger: 'item',
-        backgroundColor: '#0D1B2A',
+        trigger: 'axis',
+        axisPointer: {
+          type: 'none',
+          label: {
+            show: true,
+            backgroundColor: 'rgba(74,85,104,0.1)',
+            borderWidth: 0,
+            color: '#4A5568',
+            fontFamily: "'Fira Code', monospace",
+            fontSize: 11,
+            padding: [2, 5],
+            shadowBlur: 0,
+            formatter: params => {
+              const idx = timesArray.findIndex(el => String(el[0]) === String(params.value));
+              const hasLabel = idx === bestIdx || idx === worstIdx || (idx >= 0 && idx % 4 === 0);
+              return hasLabel ? '' : fmtTime(params.value);
+            },
+          },
+        },
+        backgroundColor: 'transparent',
         borderWidth: 0,
-        padding: [10, 14],
-        extraCssText: 'border-radius: 8px; box-shadow: 0 4px 16px rgba(0,0,0,0.28);',
-        textStyle: {
-          color: '#F8F7F2',
-          fontFamily: "'Fira Code', monospace",
-          fontSize: 12,
-        },
-        formatter(params) {
-          directionsRenderer.setDirections(timesArray[params.dataIndex][2]);
-          const timeLabel = fmtTime(timesArray[params.dataIndex][0]);
-          const dur       = fmtDuration(params.value);
-          const isBest    = params.value === minDur;
-          const badge     = isBest
-            ? '<span style="margin-left:7px;color:#FCD34D;font-size:10px;letter-spacing:0.05em">BEST</span>'
-            : '';
-          return `<div style="opacity:0.55;margin-bottom:4px;font-size:11px">${timeLabel}</div>`
-               + `<div style="font-size:14px;font-weight:600">${dur}${badge}</div>`;
-        },
+        padding: 0,
+        formatter: () => '',
       },
 
-      grid: { left: 12, right: 14, top: 14, bottom: 0, containLabel: true },
+      grid: { left: 12, right: 14, top: isMobile ? 28 : 40, bottom: 16, containLabel: true },
 
       xAxis: {
         type: 'category',
@@ -271,11 +272,25 @@ function initMap() {
         axisTick:  { show: false },
         axisLine:  { lineStyle: { color: '#DDDAD0' } },
         axisLabel: {
+          interval: 0,
           fontFamily: "'Fira Code', monospace",
           fontSize:   12,
           color:      '#4A5568',
-          formatter:  val => fmtTime(val),
-          interval:   3,
+          rich: {
+            best:  { fontWeight: 'bold', color: '#16A34A', fontFamily: "'Fira Code', monospace", fontSize: 14 },
+            worst: { fontWeight: 'bold', color: '#DC2626', fontFamily: "'Fira Code', monospace", fontSize: 14 },
+          },
+          formatter: (val, index) => {
+            const label = fmtTime(val);
+            if (index === bestIdx)  return '{best|'  + label + '}';
+            if (index === worstIdx) return '{worst|' + label + '}';
+            if (index % 4 === 0) {
+              if (bestIdx  >= 0 && Math.abs(index - bestIdx)  === 1) return '';
+              if (worstIdx >= 0 && Math.abs(index - worstIdx) === 1) return '';
+              return label;
+            }
+            return '';
+          },
         },
       },
 
@@ -297,6 +312,14 @@ function initMap() {
         type: 'bar',
         data: barData,
         barMaxWidth: 28,
+        label: {
+          show: !isMobile,
+          position: 'top',
+          fontFamily: "'Fira Code', monospace",
+          fontSize: 10,
+          fontWeight: 'bold',
+          formatter: params => Math.round(params.value / 60) + 'm',
+        },
         emphasis: {
           focus: 'self',
           itemStyle: { shadowBlur: 12, shadowColor: 'rgba(37,99,235,0.3)' },
@@ -305,21 +328,4 @@ function initMap() {
     }, false);
   }
 
-  // ── Stats cards ────────────────────────────────────────
-  function renderStats() {
-    const durations = timesArray.map(el => el[1]);
-    const minDur    = Math.min(...durations);
-    const maxDur    = Math.max(...durations);
-
-    const best  = timesArray.find(el => el[1] === minDur);
-    const worst = timesArray.find(el => el[1] === maxDur);
-
-    document.getElementById('stat-best-time').textContent  = fmtTime(best[0]);
-    document.getElementById('stat-best-dur').textContent   = fmtDuration(minDur);
-    document.getElementById('stat-worst-time').textContent = fmtTime(worst[0]);
-    document.getElementById('stat-worst-dur').textContent  = fmtDuration(maxDur);
-    document.getElementById('stat-savings').textContent    = fmtDuration(maxDur - minDur);
-
-    document.getElementById('stats-row').classList.remove('hidden');
-  }
 }
