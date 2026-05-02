@@ -1,8 +1,9 @@
 function initMap() {
   // ── State ──────────────────────────────────────────────
-  let timesArray   = [];
-  let numIntervals = 0;
-  let isRetrieving = false;
+  let timesArray    = [];
+  let numIntervals  = 0;
+  let isRetrieving  = false;
+  let startMidnight = 0;
 
   // ── Config ─────────────────────────────────────────────
   const TOTAL_HOURS    = 24;
@@ -51,6 +52,14 @@ function initMap() {
 
   document.getElementById('get-times').addEventListener('click', startAnalysis);
 
+  const datePicker = document.getElementById('date-picker');
+  const nextWeek = new Date();
+  nextWeek.setDate(nextWeek.getDate() + 7);
+  const yyyy = nextWeek.getFullYear();
+  const mm   = String(nextWeek.getMonth() + 1).padStart(2, '0');
+  const dd   = String(nextWeek.getDate()).padStart(2, '0');
+  datePicker.value = `${yyyy}-${mm}-${dd}`;
+
   previewRoute();
 
   // ── Route preview (no traffic) ─────────────────────────
@@ -98,15 +107,17 @@ function initMap() {
 
     if (isRetrieving) return;
 
-    isRetrieving = true;
-    timesArray   = [];
-    numIntervals = 0;
+    isRetrieving  = true;
+    timesArray    = [];
+    numIntervals  = 0;
+    startMidnight = midnight;
 
     const btn = document.getElementById('get-times');
     btn.classList.add('loading');
     btn.disabled = true;
 
     clearError();
+    document.getElementById('progress-section').classList.remove('hidden');
     document.getElementById('chart-placeholder').classList.add('hidden');
     document.getElementById('chart-hint').classList.add('hidden');
     updateProgress(0);
@@ -206,11 +217,16 @@ function initMap() {
     const bestIdx   = isFinal ? timesArray.findIndex(el => el[1] === minDur) : -1;
     const worstIdx  = isFinal ? timesArray.findIndex(el => el[1] === maxDur) : -1;
 
-    const barData = timesArray.map((el, i) => {
-      const isBest  = isFinal && el[1] === minDur;
-      const isWorst = isFinal && el[1] === maxDur && !isBest;
+    const allTimestamps = Array.from({ length: TOTAL_HOURS }, (_, i) => startMidnight + i * TIME_INTERVAL);
+    const durationMap   = new Map(timesArray.map(el => [el[0], el]));
+
+    const barData = allTimestamps.map((ts, i) => {
+      const entry   = durationMap.get(ts);
+      if (!entry) return { value: null };
+      const isBest  = isFinal && entry[1] === minDur;
+      const isWorst = isFinal && entry[1] === maxDur && !isBest;
       return {
-        value: el[1],
+        value: entry[1],
         itemStyle: {
           color: isBest
             ? { type: 'linear', x: 0, y: 0, x2: 0, y2: 1, global: false,
@@ -238,37 +254,13 @@ function initMap() {
       animationDuration: 450,
       animationEasing:  'cubicOut',
 
-      tooltip: {
-        trigger: 'axis',
-        axisPointer: {
-          type: 'none',
-          label: {
-            show: true,
-            backgroundColor: 'rgba(74,85,104,0.1)',
-            borderWidth: 0,
-            color: '#4A5568',
-            fontFamily: "'Fira Code', monospace",
-            fontSize: 11,
-            padding: [2, 5],
-            shadowBlur: 0,
-            formatter: params => {
-              const idx = timesArray.findIndex(el => String(el[0]) === String(params.value));
-              const hasLabel = idx === bestIdx || idx === worstIdx || (idx >= 0 && idx % 4 === 0);
-              return hasLabel ? '' : fmtTime(params.value);
-            },
-          },
-        },
-        backgroundColor: 'transparent',
-        borderWidth: 0,
-        padding: 0,
-        formatter: () => '',
-      },
+      tooltip: { show: false },
 
       grid: { left: 12, right: 14, top: isMobile ? 28 : 40, bottom: 16, containLabel: true },
 
       xAxis: {
         type: 'category',
-        data: timesArray.map(el => el[0]),
+        data: allTimestamps,
         axisTick:  { show: false },
         axisLine:  { lineStyle: { color: '#DDDAD0' } },
         axisLabel: {
@@ -320,10 +312,8 @@ function initMap() {
           fontWeight: 'bold',
           formatter: params => Math.round(params.value / 60) + 'm',
         },
-        emphasis: {
-          focus: 'self',
-          itemStyle: { shadowBlur: 12, shadowColor: 'rgba(37,99,235,0.3)' },
-        },
+        cursor: 'default',
+        emphasis: { disabled: true },
       }],
     }, false);
   }
