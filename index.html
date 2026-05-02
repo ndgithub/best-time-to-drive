@@ -53,7 +53,17 @@
 
             <div class="field-group field-group--date">
               <label class="field-label" for="date-picker">Date</label>
-              <input type="date" id="date-picker" class="field-input" />
+              <div class="field-input date-wrapper">
+                <input type="date" id="date-picker" />
+                <span class="date-day" id="date-day"></span>
+                <button type="button" class="date-cal-btn" aria-label="Open calendar">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                    <rect x="1" y="2.5" width="12" height="10.5" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M1 5.5h12" stroke="currentColor" stroke-width="1.2"/>
+                    <path d="M4.5 1v3M9.5 1v3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+                  </svg>
+                </button>
+              </div>
             </div>
 
             <div class="field-group field-group--tolls">

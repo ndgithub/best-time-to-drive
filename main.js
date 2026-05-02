@@ -53,12 +53,31 @@ function initMap() {
   document.getElementById('get-times').addEventListener('click', startAnalysis);
 
   const datePicker = document.getElementById('date-picker');
-  const nextWeek = new Date();
-  nextWeek.setDate(nextWeek.getDate() + 7);
-  const yyyy = nextWeek.getFullYear();
-  const mm   = String(nextWeek.getMonth() + 1).padStart(2, '0');
-  const dd   = String(nextWeek.getDate()).padStart(2, '0');
-  datePicker.value = `${yyyy}-${mm}-${dd}`;
+  const dayNames   = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  function updateDayLabel() {
+    const dayEl = document.getElementById('date-day');
+    if (datePicker.value) {
+      const [y, m, d] = datePicker.value.split('-').map(Number);
+      dayEl.textContent = dayNames[new Date(y, m - 1, d).getDay()];
+    } else {
+      dayEl.textContent = '';
+    }
+  }
+
+  datePicker.addEventListener('input', updateDayLabel);
+
+  document.querySelector('.date-cal-btn').addEventListener('click', () => {
+    try { datePicker.showPicker(); } catch(e) { datePicker.click(); }
+  });
+
+  // Default to next Wednesday
+  const today = new Date();
+  const daysUntilWed = (3 - today.getDay() + 7) % 7 || 7;
+  const nextWed = new Date(today);
+  nextWed.setDate(today.getDate() + daysUntilWed);
+  datePicker.value = `${nextWed.getFullYear()}-${String(nextWed.getMonth() + 1).padStart(2, '0')}-${String(nextWed.getDate()).padStart(2, '0')}`;
+  updateDayLabel();
 
   previewRoute();
 
